@@ -1,1 +1,21 @@
-for auth
+
+...
+
+## 5. Session Tokenization & Cryptographic Standards
+- **Asymmetric Signatures:** Use native Ed25519 or RS256 algorithms via the Node `crypto` library for signing stateful tokens. Never use symmetric secrets (`HS256`) in production code.
+- **Token Separation:** Access tokens must remain strictly short-lived (e.g., 15 minutes). Long-term persistence must use Refresh tokens tracked securely inside Redis to enable instant session revocation.
+
+## 6. Key Rotation & Cryptographic Lifecycles
+- **Key Versioning:** All tokens must embed a key version identifier (`kid`) within their header matrix.
+- **Graceful Transitions:** The system must track at least two active keys simultaneously: a primary signing key and a fallback verifying key. This prevents token rejection during active rotation periods.
+- **Cache Synchronization:** Key configurations must be shared atomically across instances using Redis string caches with defined expiration windows.
+
+## 7. Rate Limiting & Brute-Force Mitigation
+- **Sliding Window:** All high-stakes security endpoints (OTP request and verify) must be protected by a Redis-backed sliding window rate limiter.
+- **Atomic Operations:** Use atomic Redis commands (`MULTI`, `ZADD`, `ZREMRANGEBYSCORE`) to accurately track timestamps without race conditions.
+- **Fail-Fast:** If a threshold is crossed, instantly return a `429 Too Many Requests` status code with the uniform error response layout before executing any database or downstream communication logic.
+
+## 8. Passwordless Registration vs. Authentication Routes
+- **Signup Track:** Requires both email and phone fields. Resolves dual-channel validation via Redis states. Throws a conflict exception if the email or phone is already registered in Postgres.
+- **Signin Track:** Accepts a unified input payload allowing *either* email OR phone. Looks up the identity record inside Postgres first. Throws a 404/NotFound context exception if the user record does not exist.
+
