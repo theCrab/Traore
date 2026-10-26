@@ -1,1 +1,113 @@
-for cursor ai
+---
+description: Applies to all TypeScript backend files to enforce API layer separation, strict TDD workflow, database-first processing, and Zod/TypeScript types.
+globs: src/**/*.ts, tests/**/*.ts
+---
+# Backend Architecture & TDD Guardrails
+
+You are a Principal Backend Engineer enforcing a strict Test-Driven Development (TDD) cycle and a high-performance database-first computing architecture.
+
+## 1. Strict Test-Driven Development (TDD) Workflow
+Before writing *any* production code block or handler, you must first generate its corresponding Jest test suite.
+- **Red Phase:** Write unit or integration tests utilizing Jest that assert expected behavior and error states based on requirements.
+- **Green Phase:** Write the minimal implementation code to pass those specific tests.
+- **Refactor Phase:** Optimize the code while ensuring the test suite remains completely green.
+- **Command:** If asked to build an endpoint or model, *always* deliver the test file first or concurrently alongside the implementation.
+
+## 2. Separation of Concerns & Database-First Processing
+We follow a strict unidirectional execution path: **Routes ➔ Controllers ➔ Services ➔ Models**.
+
+### Database Delegation (Postgres & Redis)
+- **Zero In-Memory Manipulation:** All sorting, pagination, filtration, aggregation, and row limits **must** be executed natively inside the database engine (Postgres/SQL) or caching layer (Redis).
+- **TypeScript Role:** TypeScript code must strictly serve as a type-safe router, orchestrator, and schema validator. It should never perform what Postgres/Redis can compute or slice more efficiently.
+- Never fetch an entire table dataset into memory to filter or sort it using JS array methods (`.filter()`, `.sort()`).
+
+### Layer Rules
+- **Routes (`src/routes/*`):** Map endpoints to Controllers and attach Zod validation schemas or middleware.
+- **Controllers (`src/controllers/*`):** Accept the request, invoke the validated parameters, pass them to a Service, and respond with the standard JSON shape. No business or database logic.
+- **Services (`src/services/*`):** Conduct business orchestrations, coordinate between different Models, or manage external APIs. Keep them fully transport-agnostic (no Express `req`/`res`).
+- **Models (`src/models/*`):** The exclusive location for Postgres `pg` Pool queries and raw SQL string executions.
+
+---
+
+## 3. Type Conventions & Schema Validation
+
+- **Interface Preference:** Prioritize TypeScript `interface` for structural definitions, object shapes, and model row representations. Use `type` exclusively if mathematically required (e.g., unions, intersections, template literals, utility types).
+- **Runtime Validation (Zod):** Every external payload or query parameter string entering a route *must* be validated with a strict Zod schema. 
+
+---
+
+## 4. Unified Interface Shapes & Global Error Handlers
+
+### Standard API Shape
+Every successful or failed response must return this identical structure:
+```typescript
+export interface IApiSuccessResponse<T> {
+  success: true;
+  data: T;
+}
+
+export interface IApiErrorResponse {
+  success: false;
+  error: {
+    message: string;
+    code: string;
+  };
+}
+```
+
+### Global Error Infrastructure
+- Never use raw `try/catch` wrappers within controllers to construct error JSON payloads directly.
+- Let errors bubble up gracefully from Models or Services, catch them in the Controller wrapper, and dispatch them to the global error middleware using `next(error)`.
+
+```typescript
+// Blueprint for Express Controller Action
+import { Request, Response, NextFunction } from 'express';
+import { UserService } from '../services/user.service';
+
+export class UserController {
+  public static async getUserProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      // Input is pre-validated by Zod Middleware and attached to a strongly typed parameter
+      const userId = req.params.id; 
+      const user = await UserService.getProfileById(userId);
+      
+      const response: IApiSuccessResponse<typeof user> = {
+        success: true,
+        data: user
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+```
+
+## 5. Strict Code Documentation & Commenting Rules
+
+Every file, interface, class, and public method must be documented explicitly to ensure long-term maintainability.
+
+### Documentation Requirements
+*   **JSDoc Standards:** All classes, interfaces, controller actions, service methods, and repository queries must include a formal JSDoc block.
+*   **Clear Param/Return Types:** Specify parameters, their intent, and structural return signatures cleanly.
+*   **Inline Code Logic ("Why, Not What"):** Do not write comments that state the obvious (e.g., `// increment x`). Write comments to explain *why* business logic, complex regex, SQL calculations, or Redis pipelines are built a certain way.
+
+### JSDoc Blueprints for AI Generation
+```typescript
+/**
+ * Core customer profile retrieval contract.
+ */
+public interface IUserProfile {
+  /** Unique uuid v4 identifier generated by Postgres. */
+  id: string;
+  /** Primary verified communication channel. */
+  email: string;
+}
+
+/**
+ * Validates incoming HTTP payloads against a runtime Zod schema.
+ * @param schema - The strict Zod structural payload template.
+ * @throws {ValidationError} If the inbound structure violates properties.
+ */
+export const validateSchema = (schema: AnyZodObject) => { ... }
+```
