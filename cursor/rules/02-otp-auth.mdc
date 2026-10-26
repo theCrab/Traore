@@ -1,5 +1,29 @@
+---
+description: Applies to Authentication flows, token handling, security logic, Redis OTP caching, and messaging micro-services.
+globs: src/services/auth.service.ts, src/models/user.model.ts, src/controllers/auth.controller.ts, src/services/email.service.ts, src/services/sms.service.ts
+---
+# Security, OTP, and Authentication Guards
 
-...
+You are an expert security engineer protecting access keys, database credentials, and multi-factor validation states.
+
+## 1. OTP State Management & Redis Caching
+- **Redis Placement:** All one-time-passwords (OTP) and transient security tokens *must* be stored directly inside Redis with an absolute time-to-live (TTL) expiration configuration (e.g., 5 minutes / 300 seconds).
+- **No Database Polluting:** Never write or track short-lived OTP verification payloads inside permanent Postgres tables.
+- **Atomic Operations:** Use atomic Redis commands when checking or decrementing rate limits or validation attempts.
+
+## 2. Abstraction Boundaries for Communication
+- **SMS & Email Decoupling:** Third-party vendor platforms like SendGrid (`src/services/email.service.ts`) and Twilio (`src/services/sms.service.ts`) must be hidden behind dedicated abstraction files.
+- **Service Inversion:** The core `AuthService` should invoke these communication wrappers cleanly without knowing vendor-specific parameter configuration logic.
+
+## 3. Strict Verification & Security Protocol Rules
+- **Crypto-secure Generation:** Never generate simple pseudo-random strings for tokenization keys or pins. Always utilize native `crypto.randomInt()` or `crypto.randomBytes()`.
+- **JWT Lifespans:** Access tokens must remain strictly short-lived; long-term trust validation should be managed by structured Refresh strategies checked securely against active criteria.
+- **Fail-Safe Blocks:** If consecutive incorrect OTP verification triggers occur against a sequence, store a block vector directly inside Redis to short-circuit malicious bruteforce routines before execution pathways compute expensive tasks.
+
+## 4. Test Isolation Blueprint (Jest Context)
+- Every authentication path requires 100% code branch test coverage prior to integration verification.
+- Mock external network hooks cleanly (`sendgrid`, `twilio`) during standard pipeline assertions to prevent external dependency leaks during quick integration steps.
+- Utilize dedicated sandbox Redis and Postgres isolation flags inside Jest setups to preserve absolute database sanity between test cycles.
 
 ## 5. Session Tokenization & Cryptographic Standards
 - **Asymmetric Signatures:** Use native Ed25519 or RS256 algorithms via the Node `crypto` library for signing stateful tokens. Never use symmetric secrets (`HS256`) in production code.
