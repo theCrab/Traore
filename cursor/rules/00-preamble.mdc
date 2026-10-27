@@ -1,1 +1,12 @@
-the thoughts and ideas that shape this software.
+---
+alwaysApply: true
+---
+
+- All source files must include the company copyright header
+- When you are unsure about implementation details, read the relevant
+  source files before proposing changes
+- Never modify generated files in the `dist/` or `build/` directories
+- Use zod for all validation
+- Define return types with zod schemas
+- Export types generated from schemas
+- Use named exports instead of default exports
