@@ -1,0 +1,56 @@
+---
+description: Enforce Les Krabe Labs copyright and Unlicense header on every source file
+globs: "*.*"
+alwaysApply: true
+---
+
+# Copyright Header Enforcement
+
+You must ensure that the Les Krabe Labs / Unlicense header is present at the very top of every single source file you create or modify.
+
+## The Header Template
+```text
+This is free and unencumbered software released into the public domain.
+Copyright (c) 2026 Les Krabe Labs.
+For more information, please refer to <https://unlicense.org>
+```
+
+## Language-Specific Syntax
+Wrap the exact header text inside the appropriate comment syntax based on the file extension:
+
+### JavaScript, TypeScript, Go, Rust, Java, C++, C# (`.js`, `.ts`, `.tsx`, `.go`, `.rs`, `.java`, `.cpp`, `.cs`)
+```developer
+/*
+ * This is free and unencumbered software released into the public domain.
+ * Copyright (c) 2026 Les Krabe Labs.
+ * For more information, please refer to <https://unlicense.org>
+ */
+```
+
+### Python, Ruby, Shell (`.py`, `.rb`, `.sh`)
+*Note: Place this immediately below any existing shebang (`#!`) line.*
+```python
+# This is free and unencumbered software released into the public domain.
+# Copyright (c) 2026 Les Krabe Labs.
+# For more information, please refer to <https://unlicense.org>
+```
+
+### HTML, XML (`.html`, `.xml`)
+<!--
+  This is free and unencumbered software released into the public domain.
+  Copyright (c) 2026 Les Krabe Labs.
+  For more information, please refer to <https://unlicense.org>
+-->
+
+### CSS, SCSS (`.css`, `.scss`)
+```css
+/* 
+This is free and unencumbered software released into the public domain.
+Copyright (c) 2026 Les Krabe Labs.
+For more information, please refer to <https://unlicense.org>
+*/
+```
+
+## Execution Instructions
+- **New Files:** Insert this header starting at line 1 before writing any code.
+- **Existing Files:** Prepend this header to the top of the file if it is missing. Do not duplicate it if a variant already exists.

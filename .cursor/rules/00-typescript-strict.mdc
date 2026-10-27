@@ -1,0 +1,34 @@
+---
+description: Enforce strict TypeScript typing and patterns across all TS/TSX files
+globs: "*.ts, *.tsx"
+alwaysApply: true
+---
+
+# TypeScript Strict Mode Enforcement
+
+You must write all TypeScript code in strict mode. Do not write code that relies on implicit types or bypasses type safety.
+
+## Strict Rules
+- **No Implicit Any:** Every function parameter, variable (where inference fails), and class property must have an explicit type declaration. Never use `any`.
+- **Use `unknown` Over `any`:** If a type is truly dynamic or dynamic from an API, default to `unknown` and use type guards or type assertions to narrow it down.
+- **Strict Null Checks:** Always handle `null` and `undefined` explicitly. Use optional chaining (`?.`) or nullish coalescing (`??`) instead of risking runtime crashes.
+- **No Non-Null Assertions:** Avoid using the `!` post-fix operator unless absolutely necessary. Check values with an `if` statement or a guard clause instead.
+
+## Code Example Requirement
+Bad:
+```typescript
+function processData(data) {
+  return data.name;
+}
+```
+
+Good:
+```typescript
+public interface UserData {
+  name: string;
+}
+
+function processData(data: UserData): string {
+  return data.name;
+}
+```

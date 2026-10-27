@@ -1,0 +1,21 @@
+---
+description: Enforce consistent code formatting layout for all source files
+globs: "*.*"
+alwaysApply: true
+---
+
+# Code Formatting Guidelines
+
+You must format all generated or modified code blocks according to the strict layout rules defined below. Do not use mixed styles.
+
+## Structural Layout
+- **Indentation:** Always use exactly 4 spaces per indentation level. Do not use hard tabs.
+- **Quotes:** Use single quotes (`'`) for string literals in JavaScript/TypeScript. Use double quotes (`"`) only in HTML, JSON, or when escaping is required.
+- **Semicolons:** Always terminate statements with semicolons (`;`) in languages that support them.
+- **Trailing Commas:** Use trailing commas wherever valid under modern ECMAScript specifications (multiline objects, arrays, and function arguments).
+- **Line Length:** Keep code readable by aiming for a maximum length of 80–100 characters per line. Break down long expressions into descriptive variables.
+
+## Block Spacing
+- Add a space before the opening brace of control structures (e.g., `if (condition) {`).
+- Leave exactly one blank line between logical code sections or function declarations.
+- Never leave multiple consecutive trailing blank lines at the end of a file.
