@@ -8,62 +8,69 @@ import express, { Request, Response, NextFunction } from "express";
 import request from "supertest";
 import { errorMiddleware } from "../../src/middleware/error.middleware";
 import { NotFoundError } from "../../src/middleware/error.middleware";
+import enTranslation from "../../src/locales/en/translation.json";
+import { t } from "../../src/locales/i18n";
+
+const errorCodes = (
+    enTranslation.errors as typeof enTranslation.errors & {
+        codes?: {
+            resource_not_found?: string;
+            internal_server_error?: string;
+        };
+    }
+).codes;
 
 describe("Global Error Middleware", () => {
     let app: express.Application;
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
 
     beforeEach(() => {
         app = express();
         app.use(express.json());
     });
 
-    it("should capture a custom operational AppError and return the uniform error shape", async () => {
-        // Create a route that throws a custom operational AppError
+    it("should use localized message and error code for a not-found error", async () => {
         app.get("/test-error", (_req: Request, _res: Response, next: NextFunction) => {
-            next(new NotFoundError("The requested user profile was not found"));
+            next(new NotFoundError());
         });
 
-        // Use the error middleware
         app.use(errorMiddleware);
 
         const response = await request(app).get("/test-error");
 
+        expect(errorCodes?.resource_not_found).toBe("RESOURCE_NOT_FOUND");
         expect(response.status).toBe(404);
         expect(response.body).toEqual({
             success: false,
             error: {
-                message: "The requested user profile was not found",
-                code: 'RESOURCE_NOT_FOUND',
+                message: t("errors.not_found"),
+                code: errorCodes?.resource_not_found,
             },
         });
     });
 
-    it("should capture an unhandled native Error, log it, and obscure it with a generic 500 fallback", async () => {
-        // Spy on console.error to prevent polluting test logs
-        const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    it("should use localized message and error code for an unexpected error", async () => {
+        const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 
-        // Create a route that throws a native Error
         app.get("/test-crash", (_req: Request, _res: Response, next: NextFunction) => {
             next(new Error("Database connection disconnected unexpectedly"));
         });
 
-        // Use the error middleware
         app.use(errorMiddleware);
         const response = await request(app).get("/test-crash");
 
+        expect(errorCodes?.internal_server_error).toBe("INTERNAL_SERVER_ERROR");
         expect(response.status).toBe(500);
         expect(response.body).toEqual({
             success: false,
             error: {
-                message: "An unexpected internal server error occurred. Please try again later.",
-                code: 'INTERNAL_SERVER_ERROR',
+                message: t("errors.internal_server_error"),
+                code: errorCodes?.internal_server_error,
             },
         });
-
-        // Ensure that the original error was logged
         expect(consoleSpy).toHaveBeenCalled();
-
-        // Restore the original console.error method
-        consoleSpy.mockRestore();
     });
 });

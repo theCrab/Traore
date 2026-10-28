@@ -1,0 +1,25 @@
+{
+    "errors": {
+        "network_failed": "Connection lost. Please check your internet network.",
+        "unauthorized": "You do not have permission to access this resource.",
+        "invalid_input": "The data provided is invalid or malformed.",
+        "not_found": "The requested resource could not be found.",
+        "internal_server_error": "An unexpected internal server error occurred. Please try again later.",
+        "codes": {
+            "resource_not_found": "RESOURCE_NOT_FOUND",
+            "validation_failed": "VALIDATION_FAILED",
+            "internal_server_error": "INTERNAL_SERVER_ERROR"
+        }
+    },
+    "constants": {
+        "app_name": "Traore Auth",
+        "support_email": "support@leskrabelabs.com"
+    },
+    "ui": {
+        "welcome_message": "Welcome back to your dashboard",
+        "buttons": {
+            "save": "Save Changes",
+            "cancel": "Cancel"
+        }
+    }
+}

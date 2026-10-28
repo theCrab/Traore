@@ -1,0 +1,27 @@
+---
+description: Enforce externalized strings, error codes, and logs for pure Node.js backend
+globs: "*.ts"
+alwaysApply: true
+---
+
+# Backend String & Error Centralization Rule
+
+You must not hardcode user-facing API responses, HTTP error messages, validation descriptions, or constant strings inside controllers, models, or services.
+
+## Strict Mandates
+- **Localization Source:** All localized strings, messages, and codes must live in `src/locales/en/translation.json`.
+- **Request Context:** Always resolve strings using the language utility based on the incoming request context (e.g., `req.lang` or an explicit context object).
+- **Dot-Notation Keys:** Access translation nodes securely using type-safe dot notation paths (`errors.database_timeout`).
+
+## Code Pattern Requirement
+
+Bad:
+```typescript
+res.status(401).json({ error: 'You do not have permission to access this resource.' });
+```
+
+Good:
+```typescript
+// Using the request-scoped or absolute translation manager
+res.status(401).json({ error: t('errors.unauthorized') });
+```

@@ -5,13 +5,30 @@
  */
 
 import { Request, Response, ErrorRequestHandler, NextFunction } from "express";
+import { t, TranslationKeys } from "../locales/i18n";
 
 /**
- * Custom operational error base interface and implementation
+ * Resolves a safe locale identifier from the request's Accept-Language header.
+ * @param request - Incoming request providing optional language preferences.
+ * @returns A two-letter locale identifier, defaulting to English.
+ */
+function getRequestLocale(request: Request): string {
+    const languagePreference = request.get("Accept-Language")?.split(",")[0]?.trim();
+    const language = languagePreference?.split("-")[0];
+
+    return language && /^[a-z]{2}$/i.test(language) ? language.toLowerCase() : "en";
+}
+
+/**
+ * Structural contract for expected HTTP errors safe to return to API clients.
  */
 export interface IAppError extends Error {
+    /** HTTP status code to send to the API client. */
     statusCode: number;
+    /** Stable machine-readable error identifier. */
     code: string;
+    /** Optional key used to resolve the client message for the request locale. */
+    messageKey?: TranslationKeys;
 }
 
 /**
@@ -20,47 +37,70 @@ export interface IAppError extends Error {
 export class AppError extends Error implements IAppError {
     /**
      * Creates an application error with an HTTP status and stable error code.
-     * @param message - The client-safe error message.
+     * @param message - The default client-safe error message.
      * @param statusCode - The HTTP status code for the response.
      * @param code - The machine-readable error code.
+     * @param messageKey - Optional localization key for request-scoped rendering.
      */
     constructor(
-        public override readonly message: string, 
-        public readonly statusCode: number, 
-        public readonly code: string
+        message: string,
+        public readonly statusCode: number,
+        public readonly code: string,
+        public readonly messageKey?: TranslationKeys
     ) {
         super(message);
-        Object.setPrototypeOf(this, AppError.prototype); // Restore prototype chain
+        Object.setPrototypeOf(this, new.target.prototype);
+        this.name = new.target.name;
     }
 }
 
 /**
- * Concrete Core Structural Operational Errors
  * Represents a resource lookup that did not find a matching resource.
  */
 export class NotFoundError extends AppError {
     /**
-     * Creates a not-found error.
-     * @param message - The client-safe explanation of the missing resource.
+     * Creates a localized not-found error.
+     * @param message - Optional client-safe explanation overriding the default.
      */
-    constructor(message: string = "Resource not found.") {
-        super(message, 404, "RESOURCE_NOT_FOUND");
-    }
-}
-
-export class ValidationError extends AppError {
-    constructor(message: string = "Invalid input provided.") {
-        super(message, 400, "VALIDATION_FAILED");
+    constructor(message?: string) {
+        super(
+            message ?? t("errors.not_found"),
+            404,
+            t("errors.codes.resource_not_found"),
+            message === undefined ? "errors.not_found" : undefined
+        );
     }
 }
 
 /**
- * Unchanging uniform Error API Format Interface.
+ * Represents invalid request input.
+ */
+export class ValidationError extends AppError {
+    /**
+     * Creates a localized validation error.
+     * @param message - Optional client-safe explanation overriding the default.
+     */
+    constructor(message?: string) {
+        super(
+            message ?? t("errors.invalid_input"),
+            400,
+            t("errors.codes.validation_failed"),
+            message === undefined ? "errors.invalid_input" : undefined
+        );
+    }
+}
+
+/**
+ * The standardized JSON response shape for API errors.
  */
 export interface IApiErrorResponse {
-    success: boolean;
+    /** Indicates that the API operation failed. */
+    success: false;
+    /** Client-safe error details and stable machine-readable code. */
     error: {
+        /** Localized description of the failure. */
         message: string;
+        /** Stable identifier for the failure category. */
         code: string;
     };
 }
@@ -68,34 +108,43 @@ export interface IApiErrorResponse {
 /**
  * Global Error interceptor middleware.
  * Returns expected application errors to clients and hides unexpected details.
+ * @param err - The error passed through Express middleware.
+ * @param request - Incoming request used to determine the response locale.
+ * @param response - Express response used to send the API error.
+ * @param next - Express continuation for errors after headers are sent.
  */
 export const errorMiddleware: ErrorRequestHandler = (
-    err: Error | AppError,
-    _request: Request,
+    err: Error | IAppError,
+    request: Request,
     response: Response,
-    _next: NextFunction
+    next: NextFunction
 ): void => {
-    // 1. Handle Checked Operational Framework Errors
+    if (response.headersSent) {
+        next(err);
+        return;
+    }
+
+    const locale = getRequestLocale(request);
+
     if (err instanceof AppError) {
         const apiErrorResponse: IApiErrorResponse = {
             success: false,
             error: {
-                message: err.message,
+                message: err.messageKey ? t(err.messageKey, locale) : err.message,
                 code: err.code
             }
         };
         response.status(err.statusCode).json(apiErrorResponse);
-        return; 
+        return;
     }
 
-    // 2. Handle Uncaught Raw System Crashes (Do not leak system memory logs or stack traces to clients)
-    console.error('[Fatal System Exception]:', err); // Log the error for internal debugging
+    console.error(err);
 
     const serverErrorResponse: IApiErrorResponse = {
         success: false,
         error: {
-            message: "An unexpected internal server error occurred. Please try again later.",
-            code: "INTERNAL_SERVER_ERROR"
+            message: t("errors.internal_server_error", locale),
+            code: t("errors.codes.internal_server_error", locale)
         }
     };
     response.status(500).json(serverErrorResponse);
